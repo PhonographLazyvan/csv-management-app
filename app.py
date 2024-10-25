@@ -1,54 +1,48 @@
 import streamlit as st
 import pandas as pd
 
-# Τίτλος εφαρμογής
-st.title('Διαχείριση Μεγάλου CSV Αρχείου')
+# Τίτλος της εφαρμογής
+st.title("CSV File Management App")
 
-# Προσθήκη του URL του αρχείου CSV από το Google Cloud
+# Εισαγωγή του αρχείου CSV από το Google Cloud Storage
 csv_url = "https://storage.googleapis.com/phonoograph_bucket/Database/New_DB_deleted_2mInactive_20240523%20(1).csv"
 
-# Φόρτωση του CSV αρχείου από το URL
+# Εμφάνιση μηνύματος κατά τη φόρτωση του αρχείου
+st.write("Φόρτωση αρχείου CSV...")
+
+# Ανάγνωση του CSV αρχείου με την παράμετρο low_memory=False για αποφυγή σφαλμάτων ανάμειξης τύπων δεδομένων
 try:
-    df = pd.read_csv(csv_url)
-    st.write("Οι πρώτες 5 γραμμές του αρχείου:")
-    st.write(df.head())
-except Exception as e:
-    st.write(f"Πρόβλημα με τη φόρτωση του αρχείου: {e}")
+    df = pd.read_csv(csv_url, low_memory=False)
 
-# Αναζήτηση σε συγκεκριμένη στήλη
-if st.checkbox('Αναζήτηση σε δεδομένα'):
-    search_column = st.selectbox('Επιλέξτε στήλη για αναζήτηση', df.columns)
-    search_term = st.text_input('Εισάγετε όρο αναζήτησης')
-    
-    if st.button('Αναζήτηση'):
-        results = df[df[search_column].astype(str).str.contains(search_term, na=False)]
-        st.write(f"Βρέθηκαν {len(results)} αποτελέσματα.")
-        st.write(results)
+    # Μετατροπή όλων των στηλών σε μορφή κειμένου (string)
+    df = df.astype(str)
 
-# Προσθήκη νέας σειράς
-if st.checkbox('Προσθήκη νέας σειράς'):
-    st.write("Προσθέστε μια νέα σειρά")
-    new_data = {}
-    for column in df.columns:
-        new_data[column] = st.text_input(f"Νέα τιμή για τη στήλη {column}")
-    
-    if st.button('Προσθήκη'):
-        # Προσθήκη της νέας σειράς στο DataFrame
-        df = df.append(new_data, ignore_index=True)
-        st.write("Η νέα σειρά προστέθηκε!")
-        st.write(df.tail())  # Εμφάνιση των τελευταίων γραμμών για έλεγχο
+    # Εμφάνιση του DataFrame
+    st.write("Επιτυχημένη φόρτωση του αρχείου CSV:")
+    st.dataframe(df)
 
-# Διαγραφή σειράς με βάση το index
-if st.checkbox('Διαγραφή σειράς'):
-    delete_index = st.number_input('Εισάγετε τον αριθμό της σειράς για διαγραφή', min_value=0, max_value=len(df)-1)
-    
-    if st.button('Διαγραφή'):
-        df = df.drop(delete_index).reset_index(drop=True)
-        st.write(f"Η σειρά {delete_index} διαγράφηκε.")
-        st.write(df)
-
-# Κατεβάστε το επεξεργασμένο αρχείο CSV
-if st.checkbox('Λήψη του επεξεργασμένου αρχείου CSV'):
+    # Προσθήκη δυνατότητας λήψης του επεξεργασμένου αρχείου CSV
     csv = df.to_csv(index=False).encode('utf-8')
-    st.download_button(label="Κατεβάστε το επεξεργασμένο CSV", data=csv, file_name='modified_data.csv', mime='text/csv')
+    st.download_button(label="Λήψη CSV αρχείου", data=csv, file_name='processed_file.csv', mime='text/csv')
 
+    # Εμφάνιση βασικών στατιστικών για τους αριθμητικούς τύπους δεδομένων
+    st.subheader("Στατιστικά δεδομένων")
+    st.write(df.describe())
+
+    # Προσθήκη δυνατότητας φιλτραρίσματος δεδομένων
+    st.subheader("Φιλτράρισμα δεδομένων")
+    column_to_filter = st.selectbox("Επίλεξε στήλη για φιλτράρισμα", df.columns)
+    filter_value = st.text_input(f"Φίλτρο για την στήλη {column_to_filter}")
+
+    if filter_value:
+        filtered_df = df[df[column_to_filter].str.contains(filter_value, na=False)]
+        st.write(f"Αποτελέσματα φιλτραρίσματος για '{filter_value}' στη στήλη '{column_to_filter}':")
+        st.dataframe(filtered_df)
+
+    # Προσθήκη δυνατότητας λήψης του φιλτραρισμένου αρχείου CSV
+    if not filtered_df.empty:
+        filtered_csv = filtered_df.to_csv(index=False).encode('utf-8')
+        st.download_button(label="Λήψη φιλτραρισμένου CSV αρχείου", data=filtered_csv, file_name='filtered_file.csv', mime='text/csv')
+
+except Exception as e:
+    st.error(f"Σφάλμα κατά τη φόρτωση του αρχείου CSV: {e}")
