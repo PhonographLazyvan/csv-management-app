@@ -9,19 +9,21 @@ csv_url = "https://storage.googleapis.com/phonoograph_bucket/Database/New_DB_del
 
 # Φόρτωση του CSV αρχείου από το URL
 try:
-    df = pd.read_csv(csv_url)
+    df = pd.read_csv(csv_url, dtype=str)  # Όλα τα δεδομένα ως string για αποφυγή σφαλμάτων τύπων
     st.write("Οι πρώτες 5 γραμμές του αρχείου:")
     st.write(df.head())
 except Exception as e:
     st.write(f"Πρόβλημα με τη φόρτωση του αρχείου: {e}")
 
-# Αναζήτηση σε συγκεκριμένη στήλη
+# Αναζήτηση σε συγκεκριμένη στήλη με πολλαπλούς όρους
 if st.checkbox('Αναζήτηση σε δεδομένα'):
     search_column = st.selectbox('Επιλέξτε στήλη για αναζήτηση', df.columns)
-    search_term = st.text_input('Εισάγετε όρο αναζήτησης')
+    search_terms = st.text_input('Εισάγετε όρους αναζήτησης, διαχωρισμένους με κόμμα')
     
     if st.button('Αναζήτηση'):
-        results = df[df[search_column].astype(str).str.contains(search_term, na=False)]
+        terms = [term.strip() for term in search_terms.split(',')]  # Διαχωρισμός και αφαίρεση κενών
+        # Φιλτράρισμα για γραμμές που περιέχουν οποιονδήποτε από τους όρους
+        results = df[df[search_column].apply(lambda x: any(term in str(x) for term in terms))]
         st.write(f"Βρέθηκαν {len(results)} αποτελέσματα.")
         st.write(results)
 
